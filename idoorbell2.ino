@@ -10,7 +10,7 @@ const unsigned int XBEE_ENABLE_PIN = 8;
 const unsigned int QUIET_MODE_LED = 13;
 const unsigned long QUIET_DURATION = 10000;
 
-const unsigned long PING_INTERVAL = 60000;
+const unsigned long PING_INTERVAL = 10000;
 const unsigned int SENSOR_PIN = A1;    // select the input pin for the sensor
 
 int sensorValue = 0;  // variable to store the value coming from the sensor
@@ -22,7 +22,7 @@ unsigned long ping_alarm = 0;
 void setup() {
   pinMode(QUIET_MODE_LED, OUTPUT);
   pinMode(XBEE_ENABLE_PIN, OUTPUT);
-  digitalWrite(XBEE_ENABLE_PIN, HIGH);
+  digitalWrite(XBEE_ENABLE_PIN, HIGH);q
   Serial.begin(9600);  
   setupXBee();
   ping_alarm = millis() + PING_INTERVAL;
@@ -38,10 +38,11 @@ void loop() {
       // read the value from the sensor:
       sensorValue = analogRead(SENSOR_PIN);   
 
-      amps = map(sensorValue, 0, 1023, -50, 50);  // Actual amps * 10 to remove decimal point
+      amps = map(sensorValue, 0, 1023, 0, 99) - 50;  // Actual amps * 10 to remove decimal point
       
-      if (amps < -10 || amps > 10) { // It's AC so could be +ve or -ve
+      if (amps < -2 || amps > 2) {
         String msg = "DINGDONG ";
+        //msg += sensorValue; 
         xbeeSend(msg + sensorValue + " " + amps);
         mode = QUIET_MODE;
         quiet_alarm = millis() + QUIET_DURATION;
@@ -148,7 +149,8 @@ void checkPingAlarm() {
   unsigned long time = millis();
   if ((long)(time - ping_alarm) >= 0) {
     String ping_msg = "PING ";
-    xbeeSend(ping_msg + time + " " + sensorValue);
+    ping_msg += time;
+    xbeeSend(ping_msg);
     ping_alarm = time + PING_INTERVAL;
   } 
 }

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	iDoorbell v2 - A doorbell on steroids
+-->
+
+<blueprint 
+  xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.0.0"
+  xmlns:camel="http://camel.apache.org/schema/blueprint"
+  xsi:schemaLocation="
+    http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+    http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd">
+
+  <cm:property-placeholder persistent-id="freakent.idoorbell">
+    <cm:default-properties>
+      <cm:property name="prowl.apikey" value="unkown"/>
+    </cm:default-properties>
+  </cm:property-placeholder>
+
+  <camelContext id="iDoorbellBlueprintContext" xmlns="http://camel.apache.org/schema/blueprint">
+    <route id="iDoorbell">
+
+      <from uri="xbee:///dev/ttyUSB0"/>
+      <log message="Received message from xbee ${header.xbee.sender}: ${body}"/>
+
+      <filter>
+        <simple>${header.xbee.sender} == ${properties:doorbell.xbee}</simple>
+        <log message="Received message is from the Doorbell sensor: ${body}"/>
+
+        <filter>
+	  <simple>${body} contains 'DINGDONG'</simple>
+          <log message="Preparing to send Prowl notification to apikey {{prowl.apikey}}"/>
+  
+          <setHeader headerName="CamelHttpMethod">
+            <constant>POST</constant>
+          </setHeader>
+
+          <setHeader headerName="Content-Type">
+            <constant>application/x-www-form-urlencoded</constant>
+          </setHeader>
+
+          <transform>
+            <simple>apikey=${properties:prowl.apikey}&amp;application=iDoorbell&amp;event=Ding+Dong&amp;description=There+is+someone+at+the+door</simple>
+          </transform>
+
+          <log message="Invoking Prowl with apikey {{prowl.apikey}} using: ${body}"/>
+          <to uri="http4:api.prowlapp.com/publicapi/add?throwExceptionOnFailure=false"/> 
+          <log message="Response from Prowl: ${body}"/>
+
+        </filter>
+      </filter>
+    </route>
+  </camelContext>
+
+</blueprint>
